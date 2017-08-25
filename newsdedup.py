@@ -84,7 +84,7 @@ def compare_to_queue(queue, head, ratio, arguments):
     return 0
 
 def handle_known_news(rss, head):
-    """Mark read and add stare. Might change in the future."""
+    """Mark read and add star. Might change in the future."""
     rss.update_article(head.id, 1, 0)
     rss.mark_read(head.id)
 
