@@ -2,4 +2,4 @@ fuzzywuzzy
 python-googl
 pylint
 python-Levenshtein
-git+https://github.com/reuteras/ttrss-python@updateArticle#egg=ttrss-python
+ttrss-python

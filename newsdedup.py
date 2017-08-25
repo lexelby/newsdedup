@@ -92,7 +92,7 @@ def compare_to_queue(queue, head, ratio, arguments):
 
 def handle_known_news(rss, head):
     """Mark read and add star. Might change in the future."""
-    rss.update_article(head.id, 1, 0)
+    #rss.update_article(head.id, 1, 0)
     rss.mark_read(head.id)
 
 def print_time_message(arguments, message):
