@@ -120,7 +120,8 @@ def monitor_rss(rss, queue, ignore_list, arguments, config):
                 print_time_message(arguments, head.feed_title + ": " + head.title)
             if (not head.is_updated) and (not head.feed_id in ignore_list):
                 if compare_to_queue(queue, head, ratio, arguments) > 0:
-                    handle_known_news(rss, head)
+                    if not args.dry_run:
+                        handle_known_news(rss, head)
             queue.append(head.title)
         if arguments.debug:
             print_time_message(arguments, "Sleeping.")
@@ -157,6 +158,8 @@ def main():
                         help='Quiet, i.e. catch SSL warnings.')
     parser.add_argument('-v', '--verbose', action="store_true",
                         help='Verbose output.')
+    parser.add_argument('-n', '--dry-run', action="store_true",
+                        help="Don't actually mark any articles as read")
     args = parser.parse_args()
 
     if args.quiet:
