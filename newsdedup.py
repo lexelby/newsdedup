@@ -27,7 +27,14 @@ def init_ttrss(config):
     hostname = config.get('ttrss', 'hostname')
     username = config.get('ttrss', 'username')
     password = config.get('ttrss', 'password')
-    return TTRClient(hostname, username, password, auto_login=True)
+
+    htusername = config.get('ttrss', 'htusername')
+    htpassword = config.get('ttrss', 'htpassword')
+    http_auth = ()
+    if htusername or htpassword:
+        http_auth = (htusername, htpassword)
+
+    return TTRClient(hostname, username, password, http_auth=http_auth, auto_login=True)
 
 def init_title_queue(config):
     """Init deque queue to store handled titles."""
