@@ -34,7 +34,10 @@ def init_ttrss(config):
     if htusername or htpassword:
         http_auth = (htusername, htpassword)
 
-    return TTRClient(hostname, username, password, http_auth=http_auth, auto_login=True)
+    client = TTRClient(hostname, username, password, http_auth=http_auth)
+    client.login()
+
+    return client
 
 def init_title_queue(config):
     """Init deque queue to store handled titles."""
