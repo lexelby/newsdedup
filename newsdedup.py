@@ -14,6 +14,10 @@ from collections import deque
 from fuzzywuzzy import fuzz
 from ttrss.client import TTRClient
 
+
+last_seen_id = 0
+
+
 def read_configuration(config_file):
     """Read configuration file."""
     config = configparser.RawConfigParser()
@@ -58,17 +62,15 @@ def learn_last_read(rss, queue, arguments, config):
     """Get maxcount of read RSS and add to queue."""
     maxlearn = int(config.get('newsdedup', 'maxcount'))
     feeds = rss.get_feeds()
-    headlines = feeds[3].headlines(view_mode='all_articles', limit=1)
-    start_id = headlines[0].id - maxlearn - rss.get_unread_count()
     learned = 0
-    if arguments.debug:
-        print_time_message(arguments, "Debug: start_id " + str(start_id) + ".")
+    seen = 0
+    limit = 200 if maxlearn > 200 else maxlearn
     while learned < maxlearn:
-        limit = 200 if maxlearn > 200 else maxlearn
         headlines = feeds[3].headlines(
             view_mode='all_articles',
-            since_id=start_id + learned, limit=limit)
+            limit=limit, skip=seen)
         for article in headlines:
+            seen += 1
             if not article.unread:
                 queue.append(article.title)
                 learned += 1
@@ -120,31 +122,46 @@ def check_filter(headline, ignore_list, include_list):
 
 def monitor_rss(rss, queue, ignore_list, include_list, arguments, config):
     """Main function to check new rss posts."""
-    feeds = rss.get_feeds()
-    headlines = feeds[3].headlines(view_mode='all_articles', limit=1)
-    start_id = headlines[0].id - rss.get_unread_count()
+    global last_seen_id
+
     ratio = int(config.get('newsdedup', 'ratio'))
     sleeptime = int(config.get('newsdedup', 'sleep'))
     headlines = []
     while True:
         feeds = rss.get_feeds(unread_only=True)
-        try:
-            headlines = feeds[1].headlines(since_id=start_id, view_mode='unread')
-        except: # pylint: disable=bare-except
-            print_time_message(arguments, "Exception when trying to get feeds: " + traceback.format_exc())
+
+        headlines = []
+        skip = 0
+
+        while True:
+            unread_headlines = feeds[1].headlines(since_id=last_seen_id, view_mode='unread', limit=200, skip=skip)
+            skip += 200
+
+            if not unread_headlines:
+                break
+
+            headlines += unread_headlines
+
+        headlines.sort(key=lambda headline: headline.id)
+
         for head in headlines:
-            if head.id > start_id:
-                start_id = head.id
+            if head.id <= last_seen_id:
+                continue
+
             if arguments.verbose:
-                print_time_message(arguments, head.feed_title + ": " + head.title)
+                print_time_message(arguments, "Considering %d: %s / %s " % (head.id, head.feed_title, head.title))
             if (not head.is_updated) and check_filter(head, ignore_list, include_list):
                 if compare_to_queue(queue, head, ratio, arguments) > 0:
-                    if not arguments.dry_run:
+                    if arguments.dry_run:
+                        print_time_message(arguments, "### Would mark as read: %s" % head.id)
+                    else:
                         print_time_message(arguments, "### Marking as read: %s" % head.id)
                         handle_known_news(rss, head)
                 elif arguments.debug:
                     print_time_message(arguments, "### Allowing: %s %s" % (head.id, head.title))
             queue.append(head.title)
+            last_seen_id = head.id
+
         if arguments.debug:
             print_time_message(arguments, "Sleeping.")
         time.sleep(sleeptime)
