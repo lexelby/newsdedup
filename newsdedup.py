@@ -1,9 +1,10 @@
-#!/usr/bin/env python
+#!/home/lex/.pyenv/shims/python
 # -*- coding: utf-8 -*-
 """News dedup for Tiny Tiny RSS."""
 #
 # Copyright (C) 2015 Peter Reuterås
 
+import traceback
 import configparser
 import argparse
 import logging
@@ -106,6 +107,8 @@ def print_time_message(arguments, message):
         if arguments.debug:
             print("Debug: Error in print_time_message: ", str(error))
 
+    sys.stdout.flush()
+
 def check_filter(headline, ignore_list, include_list):
     if include_list and not any(term in headline.feed_title for term in include_list):
         return False
@@ -128,7 +131,7 @@ def monitor_rss(rss, queue, ignore_list, include_list, arguments, config):
         try:
             headlines = feeds[1].headlines(since_id=start_id, view_mode='unread')
         except: # pylint: disable=bare-except
-            print_time_message(arguments, "Exception when trying to get feeds.")
+            print_time_message(arguments, "Exception when trying to get feeds: " + traceback.format_exc())
         for head in headlines:
             if head.id > start_id:
                 start_id = head.id
@@ -137,9 +140,10 @@ def monitor_rss(rss, queue, ignore_list, include_list, arguments, config):
             if (not head.is_updated) and check_filter(head, ignore_list, include_list):
                 if compare_to_queue(queue, head, ratio, arguments) > 0:
                     if not arguments.dry_run:
+                        print_time_message(arguments, "### Marking as read: %s" % head.id)
                         handle_known_news(rss, head)
                 elif arguments.debug:
-                    print_time_message(arguments, "### Allowing: %s: %s" % (head.feed_title, head.title))
+                    print_time_message(arguments, "### Allowing: %s %s" % (head.id, head.title))
             queue.append(head.title)
         if arguments.debug:
             print_time_message(arguments, "Sleeping.")
